@@ -1,8 +1,13 @@
 # AWS SigV4 Proxy
 
-The AWS SigV4 Proxy will sign incoming HTTP requests and forward them to the host specified in the `Host` header.
+This is a modified version of the [AWS SigV4 Proxy](https://github.com/awslabs/aws-sigv4-proxy). The changes of this fork are as follows:
+1. added a self-signed certificate
+1. modified server to listen over HTTPS, and
+1. updated host to be passed up-front as a command line argument, so host headers aren't required.
 
-You can strip out arbirtary headers from the incoming request by using the -s option.
+The primary motivation of these changes were to allow for access of Kibana on AWS-hosted ElasticSearch as a service within a VPC.
+
+> :memo: *Note that when using this proxy, `/_plugin/kibana` route for ElasticSearch will `403` instead of `302`'ing as normal. A workaround for this is to access the redirected route directly `/_plugin/kibana/app/kibana`, which works fine.* It's not clear why this behavior occurs.
 
 ## Getting Started
 
@@ -24,50 +29,19 @@ docker run --rm -ti \
   -e 'AWS_ACCESS_KEY_ID=<YOUR ACCESS KEY ID>' \
   -e 'AWS_SECRET_ACCESS_KEY=<YOUR SECRET ACCESS KEY>' \
   -p 8080:8080 \
-  aws-sigv4-proxy -v
+  aws-sigv4-proxy -v <remote_host_to_proxy_to>
 
 # Shared Credentials
 docker run --rm -ti \
   -v ~/.aws:/root/.aws \
   -p 8080:8080 \
   -e 'AWS_PROFILE=<SOME PROFILE>' \
-  aws-sigv4-proxy -v
+  aws-sigv4-proxy -v <remote_host_to_proxy_to>
 ```
 
 ## Examples
 
-S3
-```
-# us-east-1
-curl -s -H 'host: s3.amazonaws.com' http://localhost:8080/<BUCKET_NAME>
-
-# other region
-curl -s -H 'host: s3.<BUCKET_REGION>.amazonaws.com' http://localhost:8080/<BUCKET_NAME>
-```
-
-SQS
-```sh
-curl -s -H 'host: sqs.<AWS_REGION>.amazonaws.com' 'http://localhost:8080/<AWS_ACCOUNT_ID>/<QUEUE_NAME>?Action=SendMessage&MessageBody=example'
-```
-
-API Gateway
-```sh
-curl -H 'host: <REST_API_ID>.execute-api.<AWS_REGION>.amazonaws.com' http://localhost:8080/<STAGE>/<PATH>
-```
-
-Running the service and stripping out sigv2 authorization headers
-```sh
-docker run --rm -ti \
-  -v ~/.aws:/root/.aws \
-  -p 8080:8080 \
-  -e 'AWS_PROFILE=<SOME PROFILE>' \
-  aws-sigv4-proxy -v -s Authorization
-```
-
-## Reference
-
-- [AWS SigV4 signing Docs ](https://docs.aws.amazon.com/general/latest/gr/signature-version-4.html)
-
+You can use the same examples as in the [AWS SigV4 Proxy](https://github.com/awslabs/aws-sigv4-proxy#examples), except pass the value of the host header to the `docker run` command as shown in the previous section, instead of passing it as a header to `curl`.
 
 ## License
 
